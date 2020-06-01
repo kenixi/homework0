@@ -1,5 +1,6 @@
 package com.example.test;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -16,11 +17,12 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MyAdapter.ListItemClickListener {
 
     private RecyclerView videoList;
-    private LinearLayoutManager layoutManager;
+    private List<InfoResponse> infoList;// 视频信息
     private MyAdapter mainAdapter;
+    private LinearLayoutManager layoutManager;
 
 
     @Override
@@ -29,9 +31,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         // 隐藏标题栏
         getSupportActionBar().hide();
+
         // 初始化视频列表
         initialVideoList();
     }
+
 
     private void initialVideoList() {
         // 获取videoList控件
@@ -41,12 +45,14 @@ public class MainActivity extends AppCompatActivity {
         videoList.setLayoutManager(layoutManager);
         // 为recycler设置数据适配器
         // 为使用Glide加载图片，需将activity传入
-        mainAdapter = new MyAdapter(this);
+        mainAdapter = new MyAdapter(this,this);
         videoList.setAdapter(mainAdapter);
         // 获取视频信息
         getInfo();
     }
 
+
+    // 获取视频信息
     private void getInfo() {
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl("https://beiyou.bytedance.com/api/")
@@ -55,22 +61,29 @@ public class MainActivity extends AppCompatActivity {
         ApiService apiService = retrofit.create(ApiService.class);
         apiService.getArticles().enqueue(new Callback<List<InfoResponse>>() {
             @Override
+            // 成功
             public void onResponse(Call<List<InfoResponse>> call, Response<List<InfoResponse>> response) {
                 if (response.body() != null) {
-                    Log.d("retrofit", Integer.toString(response.body().size()));
                     List<InfoResponse> videoInfos = response.body();
-                    Log.d("retrofit", videoInfos.toString());
                     if (videoInfos.size() != 0) {
+                        infoList = videoInfos;
                         mainAdapter.setVideoList(videoInfos);
                         mainAdapter.notifyDataSetChanged();
                     }
                 }
             }
-
+            // 失败
             @Override
             public void onFailure(Call<List<InfoResponse>> call, Throwable t) {
                 Log.d("retrofit Fail", t.getMessage());
             }
         });
+    }
+
+
+    // 点击item时传入视频Uri
+    @Override
+    public void onListItemClick(int clickedItemIndex) {
+        startActivity(new Intent(this, VideoActivity.class).putExtra("videoUri",infoList.get(clickedItemIndex).feedUrl));
     }
 }
